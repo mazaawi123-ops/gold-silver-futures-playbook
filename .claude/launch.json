@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "playbook",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["/Users/mo/Desktop/Playbook/.claude/serve.py"],
+      "port": 8765
+    }
+  ]
+}

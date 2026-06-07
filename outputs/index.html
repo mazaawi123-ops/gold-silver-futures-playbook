@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Gold &amp; Silver Futures — Trading Playbook</title>
+<style>
+  /* ============================================================
+     Design tokens — dark trading-desk palette.
+     Muted gold is the only strong accent; green/amber/red are
+     reserved strictly for risk + verdict states.
+     ============================================================ */
+  :root{
+    --bg:        #080b11;
+    --surface:   #111824;
+    --surface-2: #19222f;
+    --surface-3: #202b3a;
+    --border:    #283545;
+    --border-2:  #36465a;
+    --text:      #e7edf4;
+    --text-2:    #aeb9c7;
+    --text-3:    #7d8a9b;
+    --gold:      #c79a3f;
+    --gold-2:    #e0b75e;
+    --gold-soft: rgba(199,154,63,0.14);
+    --gold-line: rgba(199,154,63,0.40);
+    --green:     #3fb950;
+    --green-soft:rgba(63,185,80,0.14);
+    --amber:     #e0892e;
+    --amber-soft:rgba(224,137,46,0.14);
+    --red:       #e5534b;
+    --red-soft:  rgba(229,83,75,0.14);
+    --radius:    12px;
+    --radius-sm: 8px;
+    --shadow:    0 10px 30px rgba(0,0,0,0.35);
+    --nav-w:     244px;
+    --maxw:      1000px;
+    --mono:      ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans:      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{ background:var(--gold-soft); color:var(--gold-2); }
+  a{ color:var(--gold-2); }
+
+  .skip-link{
+    position:absolute; left:14px; top:-50px; z-index:100;
+    background:var(--gold); color:#1a130a; font-weight:700; font-size:13px;
+    padding:10px 16px; border-radius:8px; text-decoration:none;
+    transition:top .15s ease;
+  }
+  .skip-link:focus{ top:14px; }
+
+  /* Subtle ambient grid backdrop, drawn with gradients (no assets) */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(900px 500px at 80% -10%, rgba(199,154,63,0.07), transparent 60%),
+      radial-gradient(700px 500px at -10% 10%, rgba(60,90,140,0.08), transparent 60%);
+  }
+
+  /* ============================================================ Layout */
+  .app{ position:relative; z-index:1; min-height:100vh; }
+
+  .sidebar{
+    position:fixed; top:0; left:0; bottom:0; width:var(--nav-w);
+    background:linear-gradient(180deg, #0d131d, #0a0f17);
+    border-right:1px solid var(--border);
+    display:flex; flex-direction:column; z-index:60;
+    transition:transform .26s ease;
+  }
+  .brand{
+    display:flex; align-items:center; gap:11px;
+    padding:18px 18px 14px; border-bottom:1px solid var(--border);
+  }
+  .brand-mark{
+    width:34px; height:34px; flex:0 0 auto; border-radius:9px;
+    background:linear-gradient(145deg, #2a2113, #1a1408);
+    border:1px solid var(--gold-line);
+    display:flex; align-items:center; justify-content:center; color:var(--gold-2);
+    box-shadow:inset 0 0 12px rgba(199,154,63,0.18);
+  }
+  .brand-text{ display:flex; flex-direction:column; line-height:1.1; }
+  .brand-text b{ font-size:14.5px; letter-spacing:.2px; }
+  .brand-text span{ font-size:11px; color:var(--text-3); letter-spacing:.6px; text-transform:uppercase; }
+
+  .nav{ flex:1 1 auto; overflow-y:auto; padding:10px 10px 16px; }
+  .nav-label{
+    font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase;
+    color:var(--text-3); padding:12px 10px 6px;
+  }
+  .nav-btn{
+    display:flex; align-items:center; gap:11px; width:100%;
+    background:transparent; border:0; cursor:pointer;
+    color:var(--text-2); font-family:inherit; font-size:14px;
+    text-align:left; padding:9px 11px; border-radius:var(--radius-sm);
+    transition:background .15s, color .15s;
+  }
+  .nav-btn svg{ width:17px; height:17px; flex:0 0 auto; opacity:.85; }
+  .nav-btn:hover{ background:var(--surface-2); color:var(--text); }
+  .nav-btn.active{
+    background:var(--gold-soft); color:var(--gold-2);
+    box-shadow:inset 2px 0 0 var(--gold);
+  }
+  .nav-btn:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
+
+  .nav-foot{ padding:12px 14px; border-top:1px solid var(--border); }
+  .nav-foot p{ margin:0; font-size:10.5px; color:var(--text-3); line-height:1.5; }
+
+  .main{ margin-left:var(--nav-w); min-height:100vh; display:flex; flex-direction:column; }
+
+  .topbar{
+    position:sticky; top:0; z-index:40;
+    display:flex; align-items:center; gap:12px;
+    padding:11px 22px;
+    background:rgba(8,11,17,0.82); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+  }
+  .menu-btn{
+    display:none; background:var(--surface-2); border:1px solid var(--border);
+    color:var(--text); border-radius:8px; width:38px; height:38px;
+    align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto;
+  }
+  .menu-btn:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
+  .topbar h1{ font-size:15px; margin:0; font-weight:600; letter-spacing:.2px; white-space:nowrap; }
+  .status-strip{ display:flex; align-items:center; gap:8px; margin-left:auto; flex-wrap:wrap; }
+  .pill{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:10.5px; letter-spacing:.5px; text-transform:uppercase;
+    padding:5px 10px; border-radius:999px; border:1px solid var(--border-2);
+    color:var(--text-2); background:var(--surface);
+  }
+  .pill .dot{ width:6px; height:6px; border-radius:50%; background:var(--gold); }
+  .pill.live .dot{ background:var(--green); box-shadow:0 0 0 3px var(--green-soft); }
+
+  .content{ flex:1 1 auto; overflow-y:auto; padding:26px 22px 80px; scroll-behavior:smooth; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; }
+
+  section[data-section]{ display:none; animation:fade .25s ease; }
+  section[data-section].active{ display:block; }
+  @keyframes fade{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none; } }
+
+  /* ============================================================ Typography */
+  .section-head{ margin-bottom:18px; }
+  .section-head .eyebrow{
+    font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--gold);
+    display:block; margin-bottom:6px;
+  }
+  .section-head h2{ font-size:26px; margin:0 0 6px; letter-spacing:-.3px; }
+  .section-head p{ margin:0; color:var(--text-2); max-width:70ch; }
+
+  h3{ font-size:16px; margin:0 0 10px; letter-spacing:.1px; }
+  h4{ font-size:13.5px; margin:0 0 6px; color:var(--gold-2); letter-spacing:.2px; }
+  p{ margin:0 0 12px; }
+  .muted{ color:var(--text-3); }
+  .small{ font-size:12.5px; }
+  code, .mono{ font-family:var(--mono); }
+  .kbd{
+    font-family:var(--mono); font-size:12px; background:var(--surface-3);
+    border:1px solid var(--border-2); border-radius:5px; padding:1px 6px; color:var(--gold-2);
+  }
+
+  /* ============================================================ Cards & grids */
+  .card{
+    background:linear-gradient(180deg, var(--surface), #0f1620);
+    border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px; box-shadow:var(--shadow);
+  }
+  .card + .card{ margin-top:16px; }
+  .grid{ display:grid; gap:16px; }
+  .grid.cols-2{ grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); }
+  .grid.cols-3{ grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); }
+  .stack{ display:flex; flex-direction:column; gap:16px; }
+
+  .feature{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; height:100%;
+  }
+  .feature .ico{
+    width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    background:var(--gold-soft); color:var(--gold-2); border:1px solid var(--gold-line); margin-bottom:11px;
+  }
+  .feature h4{ color:var(--text); font-size:14px; margin-bottom:5px; }
+  .feature p{ margin:0; font-size:13px; color:var(--text-2); }
+
+  ul.clean{ margin:0; padding:0; list-style:none; }
+  ul.clean li{ position:relative; padding:6px 0 6px 22px; color:var(--text-2); }
+  ul.clean li::before{
+    content:""; position:absolute; left:4px; top:13px; width:7px; height:7px;
+    border-radius:2px; background:var(--gold); transform:rotate(45deg);
+  }
+  ul.checklist{ margin:0; padding-left:20px; color:var(--text-2); }
+  ul.checklist li{ margin:5px 0; }
+
+  /* Disclaimer / callouts */
+  .callout{
+    border-radius:var(--radius); padding:14px 16px; border:1px solid var(--border);
+    background:var(--surface-2); display:flex; gap:12px; align-items:flex-start;
+  }
+  .callout svg{ flex:0 0 auto; margin-top:1px; }
+  .callout.warn{ border-color:rgba(229,83,75,0.35); background:linear-gradient(180deg, rgba(229,83,75,0.10), rgba(229,83,75,0.04)); }
+  .callout.warn svg{ color:var(--red); }
+  .callout.gold{ border-color:var(--gold-line); background:var(--gold-soft); }
+  .callout.gold svg{ color:var(--gold-2); }
+  .callout h4{ margin:0 0 3px; color:var(--text); }
+  .callout p{ margin:0; font-size:13px; color:var(--text-2); }
+  .callout strong{ color:var(--text); }
+
+  /* Tables */
+  .table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
+  table{ width:100%; border-collapse:collapse; min-width:520px; }
+  th, td{ text-align:left; padding:11px 14px; border-bottom:1px solid var(--border); vertical-align:top; font-size:13.5px; }
+  th{ background:var(--surface-2); color:var(--gold-2); font-weight:600; font-size:12px; letter-spacing:.4px; text-transform:uppercase; }
+  tr:last-child td{ border-bottom:0; }
+  td .mono{ color:var(--text); }
+
+  /* Badges */
+  .badge{
+    display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600;
+    padding:3px 9px; border-radius:999px; letter-spacing:.3px;
+    border:1px solid var(--border-2); color:var(--text-2); background:var(--surface);
+  }
+  .badge.green{ color:var(--green); border-color:rgba(63,185,80,.45); background:var(--green-soft); }
+  .badge.amber{ color:var(--amber); border-color:rgba(224,137,46,.45); background:var(--amber-soft); }
+  .badge.red{ color:var(--red); border-color:rgba(229,83,75,.45); background:var(--red-soft); }
+  .badge.gold{ color:var(--gold-2); border-color:var(--gold-line); background:var(--gold-soft); }
+
+  /* ============================================================ Forms */
+  label.fld{ display:block; margin-bottom:13px; }
+  label.fld .lbl{ display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; color:var(--text-2); margin-bottom:5px; }
+  label.fld .lbl span.hint{ color:var(--text-3); font-size:11px; }
+  input[type=text], input[type=number], input[type=date], textarea{
+    width:100%; background:var(--surface-3); border:1px solid var(--border-2); color:var(--text);
+    border-radius:var(--radius-sm); padding:10px 12px; font-family:var(--sans); font-size:14px;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  input[type=number]{ font-family:var(--mono); }
+  input:focus, textarea:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px var(--gold-soft); }
+  textarea{ resize:vertical; min-height:60px; line-height:1.5; }
+  input::placeholder, textarea::placeholder{ color:var(--text-3); }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--surface-3); border:1px solid var(--border-2); color:var(--text);
+    border-radius:var(--radius-sm); padding:9px 15px; font-family:inherit; font-size:13.5px; font-weight:500;
+    cursor:pointer; transition:background .15s, border-color .15s, transform .05s;
+  }
+  .btn:hover{ background:var(--surface-2); border-color:var(--border-2); }
+  .btn:active{ transform:translateY(1px); }
+  .btn:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  .btn.gold{ background:linear-gradient(180deg, #d6a64a, #b9892f); border-color:#caa055; color:#1a130a; font-weight:600; }
+  .btn.gold:hover{ filter:brightness(1.05); }
+  .btn.ghost{ background:transparent; }
+
+  /* Segmented toggle */
+  .segmented{ display:inline-flex; background:var(--surface-3); border:1px solid var(--border-2); border-radius:999px; padding:3px; gap:3px; }
+  .segmented button{
+    border:0; background:transparent; color:var(--text-2); font-family:inherit; font-size:13px; font-weight:600;
+    padding:7px 18px; border-radius:999px; cursor:pointer; transition:all .15s; letter-spacing:.3px;
+  }
+  .segmented button:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  .segmented button[data-dir=long].active{ background:var(--green-soft); color:var(--green); box-shadow:inset 0 0 0 1px rgba(63,185,80,.4); }
+  .segmented button[data-dir=short].active{ background:var(--red-soft); color:var(--red); box-shadow:inset 0 0 0 1px rgba(229,83,75,.4); }
+
+  /* ============================================================ Calculator */
+  .calc-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .calc-out{ display:flex; flex-direction:column; gap:10px; }
+  .out-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:11px 14px;
+  }
+  .out-row .k{ font-size:12.5px; color:var(--text-2); }
+  .out-row .v{ font-family:var(--mono); font-size:16px; font-weight:600; color:var(--text); }
+  .out-row.hl{ border-color:var(--gold-line); background:var(--gold-soft); }
+  .out-row.hl .v{ color:var(--gold-2); }
+  .lev-badge{
+    font-family:var(--mono); font-size:15px; font-weight:700; padding:4px 12px; border-radius:8px;
+    border:1px solid var(--border-2); color:var(--text-3); background:var(--surface-3); min-width:74px; text-align:center;
+  }
+  .lev-badge.green{ color:var(--green); border-color:rgba(63,185,80,.5); background:var(--green-soft); }
+  .lev-badge.amber{ color:var(--amber); border-color:rgba(224,137,46,.5); background:var(--amber-soft); }
+  .lev-badge.red{ color:var(--red); border-color:rgba(229,83,75,.5); background:var(--red-soft); }
+  .calc-note{ margin-top:12px; font-size:12.5px; color:var(--amber); min-height:1.2em; }
+  .calc-note:empty{ display:none; }
+
+  /* ============================================================ Checklist */
+  .chk-list{ display:flex; flex-direction:column; gap:2px; margin-top:6px; }
+  .chk{
+    display:flex; gap:12px; align-items:flex-start; padding:12px; border-radius:var(--radius-sm);
+    border:1px solid transparent; cursor:pointer; transition:background .12s, border-color .12s;
+  }
+  .chk:hover{ background:var(--surface-2); }
+  .chk input{ position:absolute; opacity:0; width:0; height:0; }
+  .chk .box{
+    width:21px; height:21px; flex:0 0 auto; margin-top:1px; border-radius:6px;
+    border:1.5px solid var(--border-2); background:var(--surface-3);
+    display:flex; align-items:center; justify-content:center; transition:all .15s;
+  }
+  .chk .box svg{ width:13px; height:13px; opacity:0; transform:scale(.6); transition:all .15s; color:#10160f; }
+  .chk input:checked + .box{ background:var(--green); border-color:var(--green); }
+  .chk input:checked + .box svg{ opacity:1; transform:scale(1); }
+  .chk input:focus-visible + .box{ outline:2px solid var(--gold); outline-offset:2px; }
+  .chk .ctext{ font-size:13.5px; color:var(--text-2); }
+  .chk input:checked ~ .ctext{ color:var(--text); }
+  .chk .ctext .dir{ color:var(--gold-2); font-weight:600; }
+
+  .verdict{
+    margin-top:18px; display:flex; align-items:center; justify-content:space-between; gap:14px;
+    padding:16px 20px; border-radius:var(--radius);
+    border:1px solid rgba(229,83,75,.4); background:var(--red-soft);
+    transition:all .25s;
+  }
+  .verdict .vleft{ display:flex; align-items:center; gap:13px; }
+  .verdict .vdot{ width:13px; height:13px; border-radius:50%; background:var(--red); box-shadow:0 0 0 4px var(--red-soft); }
+  .verdict .verdict-text{ font-size:20px; font-weight:800; letter-spacing:1px; color:var(--red); font-family:var(--mono); }
+  .verdict .vcount{ font-size:12.5px; color:var(--text-2); }
+  .verdict.ready{ border-color:rgba(63,185,80,.5); background:var(--green-soft); }
+  .verdict.ready .vdot{ background:var(--green); box-shadow:0 0 0 4px var(--green-soft); }
+  .verdict.ready .verdict-text{ color:var(--green); }
+
+  /* ============================================================ Regime cards */
+  .regime{ border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--surface); }
+  .regime + .regime{ margin-top:12px; }
+  .regime-head{
+    width:100%; display:flex; align-items:center; gap:14px; padding:16px 18px;
+    background:transparent; border:0; cursor:pointer; text-align:left; color:var(--text); font-family:inherit;
+  }
+  .regime-head:hover{ background:var(--surface-2); }
+  .regime-head:focus-visible{ outline:2px solid var(--gold); outline-offset:-2px; }
+  .regime-ico{ width:38px; height:38px; flex:0 0 auto; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--gold-soft); border:1px solid var(--gold-line); color:var(--gold-2); }
+  .regime-title{ flex:1 1 auto; }
+  .regime-title b{ font-size:15.5px; display:block; }
+  .regime-title span{ font-size:12.5px; color:var(--text-3); }
+  .regime-chev{ flex:0 0 auto; color:var(--text-3); transition:transform .25s; }
+  .regime.open .regime-chev{ transform:rotate(180deg); color:var(--gold-2); }
+  .regime-body{ max-height:0; overflow:hidden; transition:max-height .3s ease; }
+  .regime.open .regime-body{ max-height:760px; }
+  .regime-body-inner{ padding:0 18px 18px; border-top:1px solid var(--border); padding-top:16px; }
+  .regime-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; }
+
+  /* ============================================================ Weekly prep */
+  .prep-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .prep-output{
+    width:100%; background:#0c1019; border:1px solid var(--border-2); color:var(--text);
+    border-radius:var(--radius-sm); padding:13px; font-family:var(--mono); font-size:12.5px; line-height:1.6;
+    min-height:240px; resize:vertical;
+  }
+  .copy-row{ display:flex; align-items:center; gap:12px; margin-top:12px; }
+  .copied-flag{ font-size:12.5px; color:var(--green); opacity:0; transition:opacity .2s; }
+  .copied-flag.show{ opacity:1; }
+
+  /* ============================================================ Misc */
+  .divider{ height:1px; background:var(--border); margin:22px 0; border:0; }
+  .lead-num{ font-family:var(--mono); color:var(--gold); font-size:13px; font-weight:700; margin-right:6px; }
+  .principle{ display:flex; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); }
+  .principle:last-child{ border-bottom:0; }
+  .principle .pn{ flex:0 0 auto; width:30px; height:30px; border-radius:8px; background:var(--gold-soft); border:1px solid var(--gold-line); color:var(--gold-2); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:700; font-size:13px; }
+  .principle .pc h4{ color:var(--text); margin-bottom:3px; }
+  .principle .pc p{ margin:0; font-size:13px; color:var(--text-2); }
+
+  .todo-cols{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; }
+  .todo-col h4{ display:flex; align-items:center; gap:8px; }
+  .todo-col .tag{ font-size:10px; letter-spacing:.6px; text-transform:uppercase; padding:2px 7px; border-radius:5px; background:var(--surface-3); color:var(--text-3); border:1px solid var(--border); }
+
+  .scrim{ position:fixed; inset:0; background:rgba(0,0,0,.55); opacity:0; visibility:hidden; transition:opacity .25s; z-index:55; }
+  .scrim.show{ opacity:1; visibility:visible; }
+
+  .footer-note{ max-width:var(--maxw); margin:28px auto 0; color:var(--text-3); font-size:11.5px; line-height:1.6; text-align:center; }
+
+  /* ============================================================ Responsive */
+  @media (max-width: 900px){
+    .sidebar{ transform:translateX(-100%); box-shadow:var(--shadow); }
+    .sidebar.open{ transform:translateX(0); }
+    .main{ margin-left:0; }
+    .menu-btn{ display:inline-flex; }
+    .calc-grid{ grid-template-columns:1fr; }
+    .prep-grid{ grid-template-columns:1fr; }
+    .section-head h2{ font-size:22px; }
+  }
+  @media (max-width: 560px){
+    .content{ padding:20px 14px 70px; }
+    .topbar{ padding:10px 14px; }
+    .status-strip .pill.hide-sm{ display:none; }
+    .out-row .v{ font-size:15px; }
+    .section-head h2{ font-size:20px; }
+    body{ font-size:14.5px; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+  }
+</style>
+</head>
+<body>
+<a href="#content" class="skip-link">Skip to main content</a>
+<div class="app">
+
+  <!-- ====================================================== Sidebar / Nav -->
+  <aside class="sidebar" id="sidebar" aria-label="Section navigation">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8"/><path d="M21 8v5h-5"/></svg>
+      </div>
+      <div class="brand-text">
+        <b>AU / AG Playbook</b>
+        <span>Gold &amp; Silver Futures</span>
+      </div>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-label">Plan</div>
+      <button class="nav-btn active" data-nav="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Core Principles
+      </button>
+      <button class="nav-btn" data-nav="goals">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></svg>
+        Goals &amp; Daily To-Do
+      </button>
+      <button class="nav-btn" data-nav="toolkit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.3 2.3-2.4-.6-.6-2.4z"/></svg>
+        Toolkit
+      </button>
+      <div class="nav-label">Tools</div>
+      <button class="nav-btn" data-nav="calculator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="11" x2="8" y2="11"/><line x1="12" y1="11" x2="12" y2="11"/><line x1="16" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="12" y1="15" x2="12" y2="15"/><line x1="16" y1="15" x2="16" y2="18"/></svg>
+        Position Calculator
+      </button>
+      <button class="nav-btn" data-nav="checklist">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Pre-Trade Checklist
+      </button>
+      <div class="nav-label">Reference</div>
+      <button class="nav-btn" data-nav="regimes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 12 7 12 10 5 14 19 17 12 21 12"/></svg>
+        Market Regimes
+      </button>
+      <button class="nav-btn" data-nav="playbooks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 5v14"/></svg>
+        Playbooks
+      </button>
+      <button class="nav-btn" data-nav="bollinger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6c4 0 4 3 8 3s4-3 8-3"/><path d="M3 18c4 0 4-3 8-3s4 3 8 3"/><path d="M3 12c4-2 4 2 8 0s4-2 8 0"/></svg>
+        Bollinger Reference
+      </button>
+      <button class="nav-btn" data-nav="weekly">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+        Weekly Prep
+      </button>
+      <button class="nav-btn" data-nav="mistakes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
+        Common Mistakes
+      </button>
+    </nav>
+    <div class="nav-foot">
+      <p>Educational planning tool. No live data, no broker link, no advice. State is in-memory and resets on refresh.</p>
+    </div>
+  </aside>
+
+  <div class="main">
+    <!-- ==================================================== Topbar -->
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <h1 id="topTitle">Core Principles</h1>
+      <div class="status-strip">
+        <span class="pill hide-sm"><span class="dot"></span>Educational</span>
+        <span class="pill"><span class="dot"></span>Risk-First</span>
+        <span class="pill live hide-sm"><span class="dot"></span>Planning Mode</span>
+      </div>
+    </header>
+
+    <div class="content" id="content" tabindex="-1">
+
+      <!-- ================================================== OVERVIEW -->
+      <section data-section="overview" class="active" aria-label="Core principles">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">The Foundation</span>
+            <h2>Core Principles</h2>
+            <p>A risk-first operating system for trading gold (GC) and silver (SI) futures. The edge is not a secret indicator — it is sizing, discipline, and matching tactics to the market regime.</p>
+          </div>
+
+          <div class="card">
+            <div class="principle">
+              <div class="pn">1</div>
+              <div class="pc"><h4>Risk before reward</h4><p>Define your stop and exact dollar risk <em>before</em> entry. Size from risk, never from conviction. The position size is an output of the stop, not a feeling.</p></div>
+            </div>
+            <div class="principle">
+              <div class="pn">2</div>
+              <div class="pc"><h4>Trade the regime, not the ticker</h4><p>Decide first whether the market is trending, ranging, or squeezing — then apply the tactic that fits. Using a range tactic in a trend (or vice-versa) is how good setups become losers.</p></div>
+            </div>
+            <div class="principle">
+              <div class="pn">3</div>
+              <div class="pc"><h4>Demand asymmetry</h4><p>Only take trades where the realistic reward is at least <strong>2×</strong> the risk (more for swing/position). One 3R winner can pay for several small, disciplined losses.</p></div>
+            </div>
+            <div class="principle">
+              <div class="pn">4</div>
+              <div class="pc"><h4>Respect leverage</h4><p>Futures margin is a performance bond, not a down payment. A small adverse move against an oversized position can wipe your margin before you react. Keep effective leverage modest.</p></div>
+            </div>
+            <div class="principle">
+              <div class="pn">5</div>
+              <div class="pc"><h4>Process over outcome</h4><p>Judge yourself on whether you followed the plan, not whether the trade won. A disciplined loss is a good trade; a reckless win is a bad habit forming.</p></div>
+            </div>
+            <div class="principle">
+              <div class="pn">6</div>
+              <div class="pc"><h4>Plan around the calendar</h4><p>CPI, NFP, and FOMC inject violent volatility into metals via the dollar and real yields. Reduce size or stand aside — do not get caught full-size into a print.</p></div>
+            </div>
+            <div class="principle">
+              <div class="pn">7</div>
+              <div class="pc"><h4>Limits are sacred</h4><p>A daily max-loss and a max-trades cap end the session automatically. The market will be open tomorrow; a blown account will not.</p></div>
+            </div>
+            <div class="principle">
+              <div class="pn">8</div>
+              <div class="pc"><h4>Journal &amp; review weekly</h4><p>Screenshot entries and exits, log the reasoning, and review every week. Your journal is the only honest record of whether the process is working.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================== GOALS -->
+      <section data-section="goals" aria-label="Goals and daily to-do">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">Targets &amp; Routine</span>
+            <h2>Goals &amp; Daily To-Do</h2>
+            <p>Concrete targets per style, plus a repeatable daily routine. Targets are aspirations to organize behavior — not promises of income.</p>
+          </div>
+
+          <div class="callout gold" style="margin-bottom:18px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></svg>
+            <div>
+              <h4>The $50/day goal — an aspiration, not a guarantee</h4>
+              <p>On a small account, <strong>$50/day</strong> is a useful focusing target, but it is also aggressive: on a $5,000 account it is ~1% <em>per day</em>, which is not sustainable as a guaranteed rate of return. Some days the highest-quality decision is <strong>no trade at all</strong>. Treat the target as a ceiling that lets you stop, not a quota you must force. Never widen a stop or add size to "make the number."</p>
+            </div>
+          </div>
+
+          <div class="grid cols-3" style="margin-bottom:18px;">
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+              <h4>Day trades</h4>
+              <p>Aim for <strong>$50/day</strong>. Close everything before the session ends. <strong>Stop trading</strong> the moment you hit the target — or the daily max loss, whichever comes first.</p>
+            </div>
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></div>
+              <h4>Swing trades</h4>
+              <p>Aim for <strong>2R+</strong> per trade held over several days. <strong>No daily profit target</strong> — you are paid for catching the move, not for clocking in.</p>
+            </div>
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M5 9l7-7 7 7"/></svg></div>
+              <h4>Position trades</h4>
+              <p>Aim for <strong>4R+</strong> or trail a macro regime move over weeks. Use <strong>smaller risk</strong> and <strong>low / no leverage</strong> so wide noise cannot shake you out.</p>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:18px;">
+            <h3>Hard risk guardrails</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Guardrail</th><th>Rule of thumb</th><th>Why it exists</th></tr></thead>
+                <tbody>
+                  <tr><td><strong>Max daily loss</strong></td><td><span class="mono">2%</span> of account (≈ two 1% losers) → done for the day</td><td>Caps tilt and revenge trading before they compound.</td></tr>
+                  <tr><td><strong>Max trades / day</strong></td><td><span class="mono">3</span> A-grade setups</td><td>Forces selectivity; overtrading is the small-account killer.</td></tr>
+                  <tr><td><strong>Stop at target</strong></td><td>Hit <span class="mono">+$50</span> day goal → flat &amp; walk</td><td>Protects the win; giving profit back is its own mistake.</td></tr>
+                  <tr><td><strong>Event throttle</strong></td><td>No full size into <span class="mono">CPI / NFP / FOMC</span></td><td>Spreads blow out and stops slip during the print.</td></tr>
+                  <tr><td><strong>Leverage cap</strong></td><td>Keep effective leverage low; size from the calculator</td><td>See the 500× warning below.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="callout warn" style="margin-top:16px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>
+              <div>
+                <h4>The leverage reality check</h4>
+                <p>At <strong>500× leverage</strong>, a roughly <strong>0.2% adverse move</strong> (1 ÷ 500) can wipe out your entire posted margin — and that is <em>before</em> fees, spread, and maintenance-margin requirements, which trigger a margin call or liquidation even sooner. High leverage does not increase your edge; it only shortens the distance between you and zero.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Daily to-do</h3>
+            <div class="todo-cols">
+              <div class="todo-col">
+                <h4>Pre-market <span class="tag">Prepare</span></h4>
+                <ul class="clean">
+                  <li>Scan macro &amp; overnight news: DXY, real yields, Fed tone.</li>
+                  <li>Mark key support / resistance on gold &amp; silver.</li>
+                  <li>Identify the regime: trending, ranging, or squeezing.</li>
+                  <li>Note today's high-impact events and their times.</li>
+                  <li>Set the day's risk budget and write down max loss.</li>
+                </ul>
+              </div>
+              <div class="todo-col">
+                <h4>In-session <span class="tag">Execute</span></h4>
+                <ul class="clean">
+                  <li>Only take setups that pass the full pre-trade checklist.</li>
+                  <li>Size every trade with the position calculator.</li>
+                  <li>Set the protective stop the instant you enter.</li>
+                  <li>Log entry, stop, target, and reasoning as you go.</li>
+                  <li>Stop at the +$50 target or the daily max loss.</li>
+                </ul>
+              </div>
+              <div class="todo-col">
+                <h4>Post-market <span class="tag">Review</span></h4>
+                <ul class="clean">
+                  <li>Screenshot each trade's chart with entry/exit marked.</li>
+                  <li>Journal what went right and what broke the plan.</li>
+                  <li>Tag any rule violations — fix the process, not the P&amp;L.</li>
+                  <li>Update tomorrow's levels and watchlist.</li>
+                  <li>Close the platform; protect your headspace.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================== TOOLKIT -->
+      <section data-section="toolkit" aria-label="Toolkit">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">Your Instruments</span>
+            <h2>Toolkit</h2>
+            <p>A deliberately small set of tools. Each answers one question; together they describe trend, volatility, location, and the macro backdrop that moves metals.</p>
+          </div>
+          <div class="grid cols-2">
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6c4 0 4 3 8 3s4-3 8-3"/><path d="M3 18c4 0 4-3 8-3s4 3 8 3"/><path d="M3 12c4-2 4 2 8 0s4-2 8 0"/></svg></div>
+              <h4>Bollinger Bands (20, 2)</h4>
+              <p>Volatility envelope and regime read. Tells you whether the market is trending (walking a band), ranging (bouncing between bands), or squeezing (bands pinched).</p>
+            </div>
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5"/></svg></div>
+              <h4>Moving averages (20 / 50 / 200)</h4>
+              <p>Trend backbone and dynamic support/resistance. Stacked and sloping = trend; tangled and flat = chop. The 200 frames the bigger picture.</p>
+            </div>
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg></div>
+              <h4>Structure &amp; key levels</h4>
+              <p>Horizontal support/resistance, prior highs/lows, and round numbers. Trades are taken <em>at</em> levels, not in the middle of nowhere.</p>
+            </div>
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><rect x="7" y="11" width="3" height="6"/><rect x="13" y="7" width="3" height="10"/></svg></div>
+              <h4>Gold-silver ratio</h4>
+              <p>Relative strength gauge (gold price ÷ silver price). Helps decide which metal to favor and confirms or questions a single-metal signal.</p>
+            </div>
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/></svg></div>
+              <h4>Macro drivers</h4>
+              <p>The US dollar (DXY), real yields, and Fed rate expectations are the primary fundamental levers for metals. Know which way they're leaning before you trade.</p>
+            </div>
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14l4-4 4 3 5-7 5 6"/></svg></div>
+              <h4>Momentum &amp; volume</h4>
+              <p>RSI / momentum and volume confirmation. A break or reversal with conviction behind it beats a quiet drift through a level.</p>
+            </div>
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div>
+              <h4>Economic calendar</h4>
+              <p>CPI, NFP, FOMC, and major speeches. Know the times in your session timezone so volatility events never surprise you mid-trade.</p>
+            </div>
+            <div class="feature">
+              <div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="11" x2="8" y2="11"/><line x1="16" y1="15" x2="16" y2="18"/></svg></div>
+              <h4>Calculator &amp; journal</h4>
+              <p>The position-size calculator turns a stop into a size; the journal turns trades into feedback. Both live in this app — no spreadsheet required.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================== CALCULATOR -->
+      <section data-section="calculator" aria-label="Position size calculator">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">Risk-First Sizing</span>
+            <h2>Position-Size Calculator</h2>
+            <p>Enter your account, the risk you'll accept, and your entry/stop. The calculator returns the size that keeps your loss fixed — plus the effective leverage it implies, so the number never sneaks up on you.</p>
+          </div>
+
+          <div class="card">
+            <div class="calc-grid">
+              <div>
+                <h3>Inputs</h3>
+                <label class="fld">
+                  <span class="lbl">Account size <span class="hint">USD · required</span></span>
+                  <input type="number" id="calc-account" inputmode="decimal" placeholder="5000" step="any" min="0" required aria-required="true">
+                </label>
+                <label class="fld">
+                  <span class="lbl">Risk per trade <span class="hint">% of account · required</span></span>
+                  <input type="number" id="calc-riskpct" inputmode="decimal" placeholder="1" step="any" min="0" required aria-required="true">
+                </label>
+                <label class="fld">
+                  <span class="lbl">Entry price <span class="hint">required</span></span>
+                  <input type="number" id="calc-entry" inputmode="decimal" placeholder="2350" step="any" min="0" required aria-required="true">
+                </label>
+                <label class="fld">
+                  <span class="lbl">Stop price <span class="hint">required</span></span>
+                  <input type="number" id="calc-stop" inputmode="decimal" placeholder="2340" step="any" min="0" required aria-required="true">
+                </label>
+                <label class="fld">
+                  <span class="lbl">Target price <span class="hint">optional</span></span>
+                  <input type="number" id="calc-target" inputmode="decimal" placeholder="2370" step="any" min="0">
+                </label>
+                <button class="btn ghost" id="loadExample" type="button">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 8 16 8"/></svg>
+                  Load worked example
+                </button>
+              </div>
+
+              <div>
+                <h3>Results</h3>
+                <div class="calc-out">
+                  <div class="out-row hl"><span class="k">Risk in dollars</span><span class="v" id="out-risk">—</span></div>
+                  <div class="out-row"><span class="k">Stop distance</span><span class="v" id="out-dist">—</span></div>
+                  <div class="out-row hl"><span class="k">Position size</span><span class="v" id="out-units">—</span></div>
+                  <div class="out-row"><span class="k">Notional value</span><span class="v" id="out-notional">—</span></div>
+                  <div class="out-row"><span class="k">Effective leverage</span><span class="lev-badge" id="out-lev">—</span></div>
+                  <div class="out-row"><span class="k">Reward : Risk</span><span class="v" id="out-rr">—</span></div>
+                </div>
+                <div class="calc-note" id="calcNote" role="status" aria-live="polite"></div>
+              </div>
+            </div>
+
+            <hr class="divider">
+            <div class="grid cols-2">
+              <div>
+                <h4>How it's computed</h4>
+                <ul class="checklist small mono">
+                  <li>risk$ = account × risk% ÷ 100</li>
+                  <li>stopDist = |entry − stop|</li>
+                  <li>units = risk$ ÷ stopDist</li>
+                  <li>notional = units × entry</li>
+                  <li>leverage = notional ÷ account</li>
+                  <li>R:R = |target − entry| ÷ |entry − stop|</li>
+                </ul>
+              </div>
+              <div>
+                <h4>Leverage badge</h4>
+                <p class="small">The badge colors your effective leverage so risk is visible at a glance:</p>
+                <p style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <span class="badge green">&lt; 5× &nbsp;conservative</span>
+                  <span class="badge amber">5–20× &nbsp;elevated</span>
+                  <span class="badge red">&gt; 20× &nbsp;dangerous</span>
+                </p>
+                <p class="small muted">Sizing uses generic metal <strong>units</strong>, not exchange contract multipliers — there's no contract, tick value, or multiplier input. Treat results as a planning approximation, not a brokerage margin quote.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout gold" style="margin-top:16px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <div>
+              <h4>Worked example</h4>
+              <p><span class="mono">$5,000</span> account · <span class="mono">1%</span> risk · entry <span class="mono">2350</span> · stop <span class="mono">2340</span> · target <span class="mono">2370</span> → risk <strong>$50</strong>, <strong>5 units</strong>, notional <strong>$11,750</strong>, leverage <strong>2.35×</strong>, reward:risk <strong>2R</strong>. Press <em>Load worked example</em> to verify.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================== CHECKLIST -->
+      <section data-section="checklist" aria-label="Pre-trade checklist">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">Gate Before Entry</span>
+            <h2>Pre-Trade Checklist</h2>
+            <p>Nine conditions. The verdict stays <strong>NO TRADE</strong> until every box is ticked. If you can't honestly check them all, the setup isn't ready — and that's a result, not a failure.</p>
+          </div>
+
+          <div class="card">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:8px;">
+              <h3 style="margin:0;">Direction</h3>
+              <div class="segmented" role="group" aria-label="Trade direction">
+                <button type="button" data-dir="long" class="active" aria-pressed="true">Long</button>
+                <button type="button" data-dir="short" aria-pressed="false">Short</button>
+              </div>
+            </div>
+
+            <div class="chk-list" id="chkList">
+              <label class="chk">
+                <input type="checkbox">
+                <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="ctext">Higher-timeframe trend &amp; structure support a <span class="dir" data-long="long (higher highs / higher lows, price above the 50 &amp; 200 MA)" data-short="short (lower highs / lower lows, price below the 50 &amp; 200 MA)">long (higher highs / higher lows, price above the 50 &amp; 200 MA)</span>.</span>
+              </label>
+              <label class="chk">
+                <input type="checkbox">
+                <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="ctext">Price is reacting at a clear <span class="dir" data-long="demand / support level" data-short="supply / resistance level">demand / support level</span> — I'm not chasing mid-range.</span>
+              </label>
+              <label class="chk">
+                <input type="checkbox">
+                <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="ctext">The Bollinger regime (trending / ranging / squeezing) is identified and my tactic matches it.</span>
+              </label>
+              <label class="chk">
+                <input type="checkbox">
+                <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="ctext">I have a trigger: a <span class="dir" data-long="bullish confirmation (reclaim / momentum / volume)" data-short="bearish confirmation (rejection / momentum / volume)">bullish confirmation (reclaim / momentum / volume)</span>, not a hope.</span>
+              </label>
+              <label class="chk">
+                <input type="checkbox">
+                <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="ctext">A protective stop is defined <span class="dir" data-long="below structure (invalidation)" data-short="above structure (invalidation)">below structure (invalidation)</span> <em>before</em> I enter.</span>
+              </label>
+              <label class="chk">
+                <input type="checkbox">
+                <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="ctext">Position is sized from the calculator — risk is at or below my max per-trade % of account.</span>
+              </label>
+              <label class="chk">
+                <input type="checkbox">
+                <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="ctext">Reward-to-risk is at least <strong>2R</strong> to a realistic level or target.</span>
+              </label>
+              <label class="chk">
+                <input type="checkbox">
+                <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="ctext">No high-impact event (CPI / NFP / FOMC) lands inside my hold window — or I've cut size for it.</span>
+              </label>
+              <label class="chk">
+                <input type="checkbox">
+                <span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                <span class="ctext">I'm within daily limits (under max trades, above max daily loss) and trading my plan, not emotion.</span>
+              </label>
+            </div>
+
+            <div class="verdict" id="verdict" role="status" aria-live="polite" aria-atomic="true">
+              <div class="vleft">
+                <span class="vdot"></span>
+                <span class="verdict-text">NO TRADE</span>
+              </div>
+              <span class="vcount" id="verdictCount">0 / 9 conditions met</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================== REGIMES -->
+      <section data-section="regimes" aria-label="Market regimes">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">Read It First</span>
+            <h2>Market Regimes</h2>
+            <p>Every chart is in one of three states. Tap a card to expand its signature, the Bollinger behavior, the tactic that fits, and the trap that catches traders using the wrong one.</p>
+          </div>
+
+          <!-- Trending -->
+          <div class="regime" id="regime-trending">
+            <button class="regime-head" aria-expanded="false" aria-controls="rb-trending">
+              <span class="regime-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg></span>
+              <span class="regime-title"><b>Trending</b><span>Directional move — price walks a band</span></span>
+              <span class="regime-chev"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+            </button>
+            <div class="regime-body" id="rb-trending" role="region" aria-label="Trending details">
+              <div class="regime-body-inner">
+                <div class="regime-grid">
+                  <div><h4>Signature</h4><p class="small">Higher highs/lows (or lower highs/lows). Moving averages stacked and sloping. Bands sloping with price.</p></div>
+                  <div><h4>Bollinger behavior</h4><p class="small">Price "walks the band" — repeatedly tagging the upper (uptrend) or lower (downtrend) band. %B sits persistently above 0.8 or below 0.2.</p></div>
+                  <div><h4>Tactic</h4><p class="small">Trade <strong>with</strong> the trend. Buy pullbacks toward the middle band / 20-MA in an uptrend; sell rallies into it in a downtrend. Trail your stop.</p></div>
+                  <div><h4>The trap</h4><p class="small">Fading the band. A band tag in a trend is continuation, not a reversal — shorting strength here is how accounts bleed.</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ranging -->
+          <div class="regime" id="regime-ranging">
+            <button class="regime-head" aria-expanded="false" aria-controls="rb-ranging">
+              <span class="regime-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8c4 0 4 8 8 8s4-8 8-8"/><line x1="3" y1="5" x2="21" y2="5"/><line x1="3" y1="19" x2="21" y2="19"/></svg></span>
+              <span class="regime-title"><b>Ranging</b><span>Sideways — price oscillates between bands</span></span>
+              <span class="regime-chev"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+            </button>
+            <div class="regime-body" id="rb-ranging" role="region" aria-label="Ranging details">
+              <div class="regime-body-inner">
+                <div class="regime-grid">
+                  <div><h4>Signature</h4><p class="small">Flat, parallel bands. A flat middle band. Price rotating between horizontal support and resistance with no net progress.</p></div>
+                  <div><h4>Bollinger behavior</h4><p class="small">%B swings the full 0 → 1 and back. Touches of the upper and lower bands alternate as price reverts to the mean.</p></div>
+                  <div><h4>Tactic</h4><p class="small">Fade the edges back toward the mean: sell near the upper band / resistance, buy near the lower band / support — with confirmation and tight stops just beyond the band.</p></div>
+                  <div><h4>The trap</h4><p class="small">Every range eventually breaks. A band tag <em>during</em> a genuine breakout is a trap — respect the level that finally gives way.</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Squeezing -->
+          <div class="regime" id="regime-squeezing">
+            <button class="regime-head" aria-expanded="false" aria-controls="rb-squeezing">
+              <span class="regime-ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 4 4 12 8 20"/><polyline points="16 4 20 12 16 20"/></svg></span>
+              <span class="regime-title"><b>Squeezing</b><span>Compression — volatility coils before a move</span></span>
+              <span class="regime-chev"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+            </button>
+            <div class="regime-body" id="rb-squeezing" role="region" aria-label="Squeezing details">
+              <div class="regime-body-inner">
+                <div class="regime-grid">
+                  <div><h4>Signature</h4><p class="small">Bandwidth contracts to multi-week lows. The bands pinch tight; candles shrink. The market is coiling.</p></div>
+                  <div><h4>Bollinger behavior</h4><p class="small">A "squeeze" — low bandwidth — forecasts an expansion in volatility. It signals <strong>timing</strong>, not direction.</p></div>
+                  <div><h4>Tactic</h4><p class="small">Don't predict. Wait for the expansion: a decisive close outside a band, ideally with volume. Trade the break and manage with the opposite band.</p></div>
+                  <div><h4>The trap</h4><p class="small">Fakeouts. The first push out of a squeeze often reverses. Demand confirmation and keep risk defined — anticipation gets punished here.</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================== PLAYBOOKS -->
+      <section data-section="playbooks" aria-label="Playbooks">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">Three Time Horizons</span>
+            <h2>Playbooks</h2>
+            <p>Same metals, three different games. Match the playbook to the time you can give the trade and the leverage you can responsibly carry.</p>
+          </div>
+
+          <div class="stack">
+            <div class="card">
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+                <h3 style="margin:0;">Day Trading</h3>
+                <span class="badge gold">Intraday · target $50/day</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <tbody>
+                    <tr><th>Objective</th><td>Aim for <strong>$50/day</strong>, flat before the close. Stop the moment the target or daily max loss is hit.</td></tr>
+                    <tr><th>Timeframe</th><td>1m–15m execution, 1h for context.</td></tr>
+                    <tr><th>Best regime</th><td>Clean intraday trend or a well-defined range. Avoid mushy chop.</td></tr>
+                    <tr><th>Entry trigger</th><td>Pullback to the 20-MA / middle band in trend, or a confirmed fade at a range edge.</td></tr>
+                    <tr><th>Stop</th><td>Just beyond the structure that invalidates the idea — tight and pre-defined.</td></tr>
+                    <tr><th>Target</th><td>Minimum <strong>2R</strong>, or the next intraday level. Bank it and walk.</td></tr>
+                    <tr><th>Leverage</th><td>Modest. The calculator sets the size; do not improvise larger.</td></tr>
+                    <tr><th>Events</th><td>No fresh full-size entries into CPI / NFP / FOMC.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+                <h3 style="margin:0;">Swing Trading</h3>
+                <span class="badge gold">Days · target 2R+</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <tbody>
+                    <tr><th>Objective</th><td>Catch a multi-day move for <strong>2R+</strong>. <strong>No daily profit target</strong> — patience is the edge.</td></tr>
+                    <tr><th>Timeframe</th><td>4h–daily execution, weekly for context.</td></tr>
+                    <tr><th>Best regime</th><td>Emerging trend, or a high-conviction break out of a squeeze.</td></tr>
+                    <tr><th>Entry trigger</th><td>Daily-level reclaim/rejection, or a confirmed expansion out of compression.</td></tr>
+                    <tr><th>Stop</th><td>Beyond the swing point / daily structure — wide enough to survive normal noise.</td></tr>
+                    <tr><th>Target</th><td><strong>2R+</strong>; scale and trail behind structure as it runs.</td></tr>
+                    <tr><th>Leverage</th><td>Lower than day trades — overnight gaps and event risk demand a buffer.</td></tr>
+                    <tr><th>Events</th><td>Size with the calendar in mind; a print can land while you hold.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
+                <h3 style="margin:0;">Position Trading</h3>
+                <span class="badge gold">Weeks+ · target 4R+</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <tbody>
+                    <tr><th>Objective</th><td>Trail a macro regime move over weeks for <strong>4R+</strong> — or until the macro thesis breaks.</td></tr>
+                    <tr><th>Timeframe</th><td>Daily–weekly. Decisions are slow and deliberate.</td></tr>
+                    <tr><th>Best regime</th><td>A durable macro trend in the dollar / real yields driving metals one way.</td></tr>
+                    <tr><th>Entry trigger</th><td>Weekly structure with macro alignment; scale in on pullbacks.</td></tr>
+                    <tr><th>Stop</th><td>Wide, beyond weekly structure — invalidation of the macro thesis itself.</td></tr>
+                    <tr><th>Target</th><td><strong>4R+</strong> or trail the regime; let the big move pay.</td></tr>
+                    <tr><th>Leverage</th><td><strong>Smaller risk, low / no leverage.</strong> Wide stops + leverage = liquidation.</td></tr>
+                    <tr><th>Events</th><td>Expect to hold through prints — that's why size and leverage stay small.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================== BOLLINGER -->
+      <section data-section="bollinger" aria-label="Bollinger bands reference">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">Indicator Reference</span>
+            <h2>Bollinger Bands Reference</h2>
+            <p>A volatility envelope around a moving average. The defaults are a 20-period simple moving average with bands two standard deviations away.</p>
+          </div>
+
+          <div class="grid cols-2">
+            <div class="card">
+              <h3>Formulas</h3>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Component</th><th>Formula</th></tr></thead>
+                  <tbody>
+                    <tr><td>Middle band</td><td class="mono">20-period SMA of price</td></tr>
+                    <tr><td>Upper band</td><td class="mono">SMA + (k × σ)</td></tr>
+                    <tr><td>Lower band</td><td class="mono">SMA − (k × σ)</td></tr>
+                    <tr><td>%B</td><td class="mono">(price − lower) ÷ (upper − lower)</td></tr>
+                    <tr><td>Bandwidth</td><td class="mono">(upper − lower) ÷ middle</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="small muted" style="margin-top:12px;">Defaults: period <span class="kbd">20</span>, multiplier <span class="kbd">k = 2</span>, where <span class="mono">σ</span> is the standard deviation of price over the same 20 periods. A shorter period reacts faster but adds noise; a longer period is smoother but lags.</p>
+            </div>
+
+            <div class="card">
+              <h3>Reading %B and bandwidth</h3>
+              <ul class="clean">
+                <li><span class="mono">%B &gt; 1</span> — price closed <em>above</em> the upper band (strength or exhaustion — context decides).</li>
+                <li><span class="mono">%B &lt; 0</span> — price closed <em>below</em> the lower band.</li>
+                <li><span class="mono">%B ≈ 0.5</span> — price sits at the middle band / mean.</li>
+                <li>Low <strong>bandwidth</strong> = a squeeze: compression that forecasts an expansion in volatility.</li>
+                <li>High <strong>bandwidth</strong> = an already-extended, volatile market.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="callout warn" style="margin-top:16px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>
+            <div>
+              <h4>Caveats — bands are not signals</h4>
+              <p>Bollinger Bands measure <strong>relative</strong> volatility; they are not standalone buy/sell triggers. A touch of a band is <em>not</em> by itself a signal — in a trend, price walks the band for a long time. A squeeze tells you a move is <strong>coming</strong>, not which <strong>way</strong> it goes. Always combine bands with trend, structure, momentum, and volume, and tune the settings to your timeframe through honest backtesting rather than curve-fitting to the last chart.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================== WEEKLY PREP -->
+      <section data-section="weekly" aria-label="Weekly prep template">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">Sunday Routine</span>
+            <h2>Weekly Prep Template</h2>
+            <p>Fill it in before the week starts, then copy the plain-text version into your journal. Nothing is saved — it lives in memory and resets on refresh, so export what you want to keep.</p>
+          </div>
+
+          <div class="card">
+            <div class="prep-grid">
+              <div>
+                <h3>Fill in the week</h3>
+                <label class="fld"><span class="lbl">Week of</span><input type="date" id="wk-date" data-wk="Week of"></label>
+                <label class="fld"><span class="lbl">Macro backdrop <span class="hint">DXY · real yields · Fed</span></span><textarea id="wk-macro" data-wk="Macro backdrop" placeholder="Dollar leaning…, real yields…, Fed expectations…"></textarea></label>
+                <label class="fld"><span class="lbl">Key events this week <span class="hint">CPI / NFP / FOMC + times</span></span><textarea id="wk-events" data-wk="Key events" placeholder="Wed CPI 8:30 ET, Fri NFP 8:30 ET…"></textarea></label>
+                <label class="fld"><span class="lbl">Gold (GC) bias</span><input type="text" id="wk-goldbias" data-wk="Gold bias" placeholder="Bullish above…, neutral…, bearish below…"></label>
+                <label class="fld"><span class="lbl">Silver (SI) bias</span><input type="text" id="wk-silverbias" data-wk="Silver bias" placeholder="Bullish above…, neutral…, bearish below…"></label>
+                <label class="fld"><span class="lbl">Gold key levels <span class="hint">support / resistance</span></span><input type="text" id="wk-goldlevels" data-wk="Gold key levels" placeholder="S: …  R: …"></label>
+                <label class="fld"><span class="lbl">Silver key levels <span class="hint">support / resistance</span></span><input type="text" id="wk-silverlevels" data-wk="Silver key levels" placeholder="S: …  R: …"></label>
+                <label class="fld"><span class="lbl">Gold-silver ratio note</span><input type="text" id="wk-ratio" data-wk="Gold-silver ratio" placeholder="Ratio at…, favoring gold/silver…"></label>
+                <label class="fld"><span class="lbl">Regime read</span><input type="text" id="wk-regime" data-wk="Regime read" placeholder="Trending / ranging / squeezing on each metal"></label>
+                <label class="fld"><span class="lbl">Risk budget for the week</span><input type="text" id="wk-risk" data-wk="Risk budget" placeholder="Max risk/trade…, weekly max drawdown…"></label>
+                <label class="fld"><span class="lbl">Notes &amp; scenarios</span><textarea id="wk-notes" data-wk="Notes & scenarios" placeholder="If X then…, primary plan…, invalidation…"></textarea></label>
+              </div>
+
+              <div>
+                <h3>Generated template</h3>
+                <textarea class="prep-output" id="prepOutput" readonly aria-label="Generated weekly prep text"></textarea>
+                <div class="copy-row">
+                  <button class="btn gold" id="copyBtn" type="button">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    Copy to clipboard
+                  </button>
+                  <span class="copied-flag" id="copiedFlag" role="status" aria-live="polite">Copied ✓</span>
+                </div>
+                <p class="small muted" style="margin-top:10px;">If clipboard access is blocked, the text above is selected automatically — press <span class="kbd">Cmd/Ctrl</span> + <span class="kbd">C</span> to copy.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================== MISTAKES -->
+      <section data-section="mistakes" aria-label="Common mistakes">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">Avoid These</span>
+            <h2>Common Mistakes</h2>
+            <p>Most blown accounts die from the same short list. Read it often — recognizing the pattern in the moment is what saves the trade.</p>
+          </div>
+          <div class="grid cols-2">
+            <div class="feature"><h4>Oversizing / over-leverage</h4><p>The single fastest way to ruin. Size from the stop, keep effective leverage low, and respect the calculator's number.</p></div>
+            <div class="feature"><h4>Trading full-size into events</h4><p>Entering CPI / NFP / FOMC at full size invites slippage and gapped stops. Cut size or stand aside.</p></div>
+            <div class="feature"><h4>No predefined stop</h4><p>"I'll watch it" is not a stop. Without a hard invalidation set before entry, a small loss becomes an account event.</p></div>
+            <div class="feature"><h4>Moving stops against the plan</h4><p>Widening a stop to avoid being wrong converts a planned 1R loss into an unplanned disaster. Stops move to protect, never to hope.</p></div>
+            <div class="feature"><h4>Revenge trading</h4><p>Chasing a loss with a bigger, unplanned trade. This is exactly what the daily max-loss limit exists to stop.</p></div>
+            <div class="feature"><h4>Band touch = reversal</h4><p>Treating every Bollinger band tag as a turn. In a trend, price walks the band — fading it bleeds you out.</p></div>
+            <div class="feature"><h4>Ignoring the higher timeframe</h4><p>Taking a counter-trend scalp against an obvious daily trend. Align with the bigger picture or pass.</p></div>
+            <div class="feature"><h4>No daily loss limit</h4><p>Without a hard stop on the day, one bad session can erase weeks of progress. Set it, honor it.</p></div>
+            <div class="feature"><h4>Chasing extended moves</h4><p>Entering after the move has already run — buying the top tick. Wait for the pullback to a level or pass entirely.</p></div>
+            <div class="feature"><h4>Overtrading</h4><p>Forcing trades to "make the $50" or out of boredom. Three A-grade setups beat twenty mediocre ones.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <p class="footer-note">
+        AU / AG Playbook · A planning and risk-sizing tool for gold &amp; silver futures.<br>
+        No live market data, broker connection, or persistence. All inputs reset on refresh.
+      </p>
+    </div>
+  </div>
+</div>
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Helpers ---------- */
+  var $  = function(id){ return document.getElementById(id); };
+  var qa = function(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); };
+
+  var SECTION_TITLES = {
+    overview:"Core Principles", goals:"Goals & Daily To-Do", toolkit:"Toolkit",
+    calculator:"Position Calculator", checklist:"Pre-Trade Checklist", regimes:"Market Regimes",
+    playbooks:"Playbooks", bollinger:"Bollinger Reference", weekly:"Weekly Prep", mistakes:"Common Mistakes"
+  };
+
+  /* ---------- Router + mobile drawer ---------- */
+  var navButtons = qa('[data-nav]');
+  var sections   = qa('[data-section]');
+  var sidebar    = $('sidebar');
+  var scrim      = $('scrim');
+  var menuBtn    = $('menuBtn');
+  var content    = $('content');
+  var topTitle   = $('topTitle');
+
+  function focusableIn(el){
+    return qa('button, a[href], input, textarea, [tabindex]:not([tabindex="-1"])', el)
+      .filter(function(n){ return n.offsetParent !== null; });
+  }
+  function trapTab(e){
+    if(e.key !== 'Tab' || !sidebar.classList.contains('open')){ return; }
+    var items = focusableIn(sidebar);
+    if(!items.length){ return; }
+    var first = items[0], last = items[items.length - 1];
+    if(e.shiftKey && document.activeElement === first){
+      e.preventDefault(); last.focus();
+    } else if(!e.shiftKey && document.activeElement === last){
+      e.preventDefault(); first.focus();
+    }
+  }
+  function closeNav(){
+    var wasOpen = sidebar.classList.contains('open');
+    sidebar.classList.remove('open');
+    scrim.classList.remove('show');
+    sidebar.removeAttribute('aria-modal');
+    sidebar.removeAttribute('role');
+    menuBtn.setAttribute('aria-expanded','false');
+    if(wasOpen && document.body.clientWidth <= 900){ menuBtn.focus(); }
+  }
+  function openNav(){
+    sidebar.classList.add('open');
+    scrim.classList.add('show');
+    sidebar.setAttribute('aria-modal','true');
+    sidebar.setAttribute('role','dialog');
+    menuBtn.setAttribute('aria-expanded','true');
+    var items = focusableIn(sidebar);
+    if(items.length){ items[0].focus(); }
+  }
+  function setSection(id){
+    for(var i=0;i<sections.length;i++){
+      sections[i].classList.toggle('active', sections[i].getAttribute('data-section') === id);
+    }
+    for(var j=0;j<navButtons.length;j++){
+      var on = navButtons[j].getAttribute('data-nav') === id;
+      navButtons[j].classList.toggle('active', on);
+      if(on){ navButtons[j].setAttribute('aria-current','page'); }
+      else  { navButtons[j].removeAttribute('aria-current'); }
+    }
+    if(topTitle && SECTION_TITLES[id]){ topTitle.textContent = SECTION_TITLES[id]; }
+    closeNav();
+    if(content){ content.scrollTop = 0; }
+  }
+  navButtons.forEach(function(b){
+    b.addEventListener('click', function(){ setSection(b.getAttribute('data-nav')); });
+  });
+  menuBtn.addEventListener('click', function(){
+    if(sidebar.classList.contains('open')){ closeNav(); } else { openNav(); }
+  });
+  scrim.addEventListener('click', closeNav);
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && sidebar.classList.contains('open')){ closeNav(); return; }
+    trapTab(e);
+  });
+
+  /* ---------- Position-size calculator ---------- */
+  var inAcc = $('calc-account'), inRisk = $('calc-riskpct'),
+      inEntry = $('calc-entry'), inStop = $('calc-stop'), inTarget = $('calc-target');
+  var oRisk = $('out-risk'), oDist = $('out-dist'), oUnits = $('out-units'),
+      oNotional = $('out-notional'), oLev = $('out-lev'), oRR = $('out-rr');
+  var calcNote = $('calcNote');
+  var DASH = '—';
+
+  function parseNum(el){
+    if(!el || el.value === '' || el.value == null){ return NaN; }
+    var v = parseFloat(el.value);
+    return isFinite(v) ? v : NaN;
+  }
+  function usd(v){
+    return '$' + v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function trimNum(v, maxDp){
+    // up to maxDp decimals, trailing zeros stripped
+    var s = v.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:maxDp});
+    return s;
+  }
+  function setLevBadge(lev){
+    oLev.className = 'lev-badge';
+    if(!isFinite(lev)){ oLev.textContent = DASH; return; }
+    var cls = (lev < 5) ? 'green' : (lev <= 20 ? 'amber' : 'red');
+    oLev.classList.add(cls);
+    oLev.textContent = trimNum(lev, 2) + '×';
+  }
+
+  function computeCalc(){
+    var account = parseNum(inAcc),
+        riskpct = parseNum(inRisk),
+        entry   = parseNum(inEntry),
+        stop    = parseNum(inStop),
+        target  = parseNum(inTarget);
+
+    var notes = [];
+
+    var accOk   = isFinite(account) && account > 0;
+    var riskOk  = isFinite(riskpct) && riskpct > 0;
+    var entryOk = isFinite(entry)   && entry > 0;
+    var stopOk  = isFinite(stop)    && stop  > 0;
+
+    // Soft validation messages (only when a value is present but invalid)
+    if(inAcc.value  !== '' && !accOk)  { notes.push('Account size must be greater than 0.'); }
+    if(inRisk.value !== '' && !riskOk) { notes.push('Risk % must be greater than 0.'); }
+    if(inEntry.value!== '' && !entryOk){ notes.push('Entry price must be greater than 0.'); }
+    if(inStop.value !== '' && !stopOk) { notes.push('Stop price must be greater than 0.'); }
+
+    // Risk dollars
+    var riskDollars = (accOk && riskOk) ? (account * riskpct / 100) : NaN;
+    oRisk.textContent = isFinite(riskDollars) ? usd(riskDollars) : DASH;
+
+    // Stop distance
+    var dist = NaN;
+    if(entryOk && stopOk){
+      dist = Math.abs(entry - stop);
+      if(dist === 0){ notes.push('Stop cannot equal entry — stop distance is zero.'); }
+    }
+    oDist.textContent = (isFinite(dist) && dist > 0) ? trimNum(dist, 4) : DASH;
+
+    // Units
+    var units = NaN;
+    if(isFinite(riskDollars) && isFinite(dist) && dist > 0){
+      units = riskDollars / dist;
+    }
+    oUnits.textContent = isFinite(units) ? (trimNum(units, 4) + ' units') : DASH;
+
+    // Notional
+    var notional = NaN;
+    if(isFinite(units) && entryOk){
+      notional = units * entry;
+    }
+    oNotional.textContent = isFinite(notional) ? usd(notional) : DASH;
+
+    // Leverage
+    var lev = NaN;
+    if(isFinite(notional) && accOk){
+      lev = notional / account;
+    }
+    setLevBadge(lev);
+
+    // Reward : Risk (target optional)
+    var rr = NaN;
+    if(inTarget.value !== ''){
+      if(isFinite(target) && target > 0 && entryOk && isFinite(dist) && dist > 0){
+        rr = Math.abs(target - entry) / dist;
+      } else if(target <= 0 || !isFinite(target)){
+        // invalid target supplied
+        if(inTarget.value !== '' && !(isFinite(target) && target > 0)){
+          notes.push('Target price must be greater than 0.');
+        }
+      }
+    }
+    oRR.textContent = isFinite(rr) ? (trimNum(rr, 2) + 'R') : DASH;
+
+    calcNote.textContent = notes.join(' ');
+  }
+
+  [inAcc, inRisk, inEntry, inStop, inTarget].forEach(function(el){
+    el.addEventListener('input', computeCalc);
+  });
+
+  $('loadExample').addEventListener('click', function(){
+    inAcc.value = '5000'; inRisk.value = '1'; inEntry.value = '2350';
+    inStop.value = '2340'; inTarget.value = '2370';
+    computeCalc();
+  });
+
+  computeCalc();
+
+  /* ---------- Pre-trade checklist ---------- */
+  var checks = qa('#chkList input[type=checkbox]');
+  var verdict = $('verdict');
+  var verdictText = verdict.querySelector('.verdict-text');
+  var verdictCount = $('verdictCount');
+  var total = checks.length;
+
+  function updateVerdict(){
+    var n = 0;
+    for(var i=0;i<checks.length;i++){ if(checks[i].checked){ n++; } }
+    var ready = (n === total);
+    verdict.classList.toggle('ready', ready);
+    verdictText.textContent = ready ? 'READY' : 'NO TRADE';
+    verdictCount.textContent = n + ' / ' + total + ' conditions met';
+  }
+  checks.forEach(function(c){ c.addEventListener('change', updateVerdict); });
+  updateVerdict();
+
+  /* Direction toggle swaps the long/short wording */
+  var dirButtons = qa('[data-dir]');
+  function setDir(dir){
+    dirButtons.forEach(function(b){
+      var on = b.getAttribute('data-dir') === dir;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    qa('.dir').forEach(function(el){
+      var txt = (dir === 'short') ? el.getAttribute('data-short') : el.getAttribute('data-long');
+      if(txt != null){ el.textContent = txt; }
+    });
+  }
+  dirButtons.forEach(function(b){
+    b.addEventListener('click', function(){ setDir(b.getAttribute('data-dir')); });
+  });
+  setDir('long');
+
+  /* ---------- Regime cards (button = native keyboard support) ---------- */
+  qa('.regime-head').forEach(function(head){
+    head.addEventListener('click', function(){
+      var card = head.parentNode; // .regime
+      var open = card.classList.toggle('open');
+      head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+
+  /* ---------- Weekly prep template ---------- */
+  var wkFields = qa('[data-wk]');
+  var prepOutput = $('prepOutput');
+  var copyBtn = $('copyBtn');
+  var copiedFlag = $('copiedFlag');
+
+  function buildWeekText(){
+    var lines = ['GOLD & SILVER — WEEKLY PREP', '============================', ''];
+    wkFields.forEach(function(el){
+      var label = el.getAttribute('data-wk');
+      var val = (el.value || '').trim();
+      lines.push(label + ': ' + (val !== '' ? val : '—'));
+    });
+    return lines.join('\n');
+  }
+  function refreshPreview(){ prepOutput.value = buildWeekText(); }
+  wkFields.forEach(function(el){ el.addEventListener('input', refreshPreview); });
+  refreshPreview();
+
+  function flashCopied(){
+    copiedFlag.classList.add('show');
+    window.setTimeout(function(){ copiedFlag.classList.remove('show'); }, 1800);
+  }
+  function fallbackCopy(){
+    // Reveal/select the generated text so the user can copy manually.
+    prepOutput.focus();
+    prepOutput.select();
+    try{ prepOutput.setSelectionRange(0, prepOutput.value.length); }catch(e){}
+    var done = false;
+    try{ done = document.execCommand('copy'); }catch(e){ done = false; }
+    return done;
+  }
+  copyBtn.addEventListener('click', function(){
+    refreshPreview();
+    var text = prepOutput.value;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        flashCopied();
+      }).catch(function(){
+        if(fallbackCopy()){ flashCopied(); }
+      });
+    } else {
+      if(fallbackCopy()){ flashCopied(); }
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
